@@ -19,6 +19,28 @@ refined outputs, and run stats — all over the S3-compatible API.
 - **Curation dashboard** — raw vs refined storage, samples processed / kept / filtered, pass and dedup ratios
 - **Kept starter scaffolding** — full-bucket File Explorer, drag-and-drop Upload, FastAPI backend with strict layered architecture, structural tests, and agent-first docs
 
+## What it looks like
+
+**Dashboard** — curation metrics (recipes, runs, pass and dedup ratios), the raw-vs-refined B2 storage split, and the most recent runs.
+
+![Dashboard with curation metrics, B2 storage split, and recent runs](docs/images/dashboard.png)
+
+**Recipes** — the recipe library: every Data-Juicer operator chain, stored as YAML in B2, ready to run, view, or delete.
+
+![Recipes library listing Data-Juicer operator chains stored as YAML in B2](docs/images/recipes.png)
+
+**Recipe detail** — a recipe's full YAML operator chain next to its runs, each broken down to per-operator kept and filtered counts.
+
+![Recipe detail showing the YAML operator chain and per-operator run stats](docs/images/recipe-detail.png)
+
+**Runs** — curation-run history read back from B2 `stats/`, with samples kept vs filtered, pass rate, dedup ratio, and a per-operator table.
+
+![Runs history with kept vs filtered counts and per-operator stats](docs/images/runs.png)
+
+**Datasets** — a modality-aware browse of the app's own `raw / refined / stats / configs` prefixes, with image previews and object sizes.
+
+![Datasets browser showing raw image-text corpus with previews and sizes](docs/images/datasets.png)
+
 ## Quick Start
 
 You need: Node.js >= 20, pnpm >= 9, Python >= 3.12, and a free **[Backblaze B2 account](https://www.backblaze.com/sign-up/ai-cloud-storage?utm_source=github&utm_medium=referral&utm_campaign=ai_artifacts&utm_content=b2ai-data-juicer-multimodal-curation)**.
