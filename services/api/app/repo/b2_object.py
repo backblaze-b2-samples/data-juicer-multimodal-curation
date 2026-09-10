@@ -17,7 +17,7 @@ def get_object_bytes(key: str) -> bytes:
 
     Buffers the whole object, so callers MUST size-guard before calling (see
     `service.files.get_file_detail`). Raises RuntimeError on any S3 failure,
-    including a not-found object — callers that need to distinguish "missing"
+    including a not-found object - callers that need to distinguish "missing"
     should `head` first via `get_file_metadata`.
 
     The streaming `.read()` stays inside the try: on a large object it can fail

@@ -37,7 +37,7 @@ def test_decompression_bomb_limit_is_reported(monkeypatch):
     assert detail.image_height is None
     assert detail.metadata_warning is not None
     assert "decompression-bomb" in detail.metadata_warning
-    # Core fields still exact — the warning must not imply the file is broken.
+    # Core fields still exact - the warning must not imply the file is broken.
     assert detail.md5
     assert detail.sha256
     assert detail.size_bytes == len(_png_bytes())

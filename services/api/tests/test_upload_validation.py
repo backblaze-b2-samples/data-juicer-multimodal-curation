@@ -42,8 +42,8 @@ def _meta(key: str, *, size_bytes: int, content_type: str) -> FileMetadata:
         ("a\x00b.txt", "ab.txt"),  # null byte removed
         ("my file.txt", "my_file.txt"),  # unsafe char substituted
         ("...hidden", "_hidden"),  # dot run collapses to _ before dot-strip
-        ("", "unnamed"),  # empty → placeholder
-        ("/", "unnamed"),  # only a path separator → placeholder
+        ("", "unnamed"),  # empty -> placeholder
+        ("/", "unnamed"),  # only a path separator -> placeholder
     ],
 )
 def test_sanitize_filename(raw, expected):
@@ -73,7 +73,7 @@ def test_sanitize_filename_truncates_long_names(raw):
         ("photo.jpg", "image/jpeg", True),
         ("photo.jpeg", "image/jpeg", True),
         ("photo.png", "image/jpeg", False),  # extension/type mismatch
-        ("noext", "image/jpeg", True),  # no extension → not enforced
+        ("noext", "image/jpeg", True),  # no extension -> not enforced
         ("x.exe", "image/jpeg", False),
         ("x.pdf", "application/octet-stream", False),  # type not in map
         # Added file types (markdown, configs, datasets, office docs, video).
@@ -134,7 +134,7 @@ def test_matches_content_signature(data, content_type, expected):
 
 def test_signature_predicate_agrees_with_checker():
     """`content_type_has_signature` and `matches_content_signature` share one
-    source, so every allowed type is classified consistently — this guards the
+    source, so every allowed type is classified consistently - this guards the
     verify fast-path that skips the Range-GET for signature-less types."""
     for ct in ALLOWED_TYPES:
         if content_type_has_signature(ct):

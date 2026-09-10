@@ -8,18 +8,18 @@ Why this exists: `/files` and `/files/stats` both need *every* object (newest-N
 requires a full listing, since S3 lists lexicographically), and paginating a
 16k-object bucket measured 8-20s. One shared scan is therefore mandatory, and a
 cache that only ever expires would hand that 8-20s wait to a user again on the
-first request after every expiry — which is exactly what a browsing session hits.
+first request after every expiry - which is exactly what a browsing session hits.
 
 So the cache has three states, and only the first can make a caller wait:
 
-1. **cold** (nothing cached) — the caller blocks on a single-flight scan.
-2. **fresh** (younger than `settings.list_cache_ttl_seconds`) — served instantly.
-3. **stale** — the old snapshot is served *instantly* and a background thread
+1. **cold** (nothing cached) - the caller blocks on a single-flight scan.
+2. **fresh** (younger than `settings.list_cache_ttl_seconds`) - served instantly.
+3. **stale** - the old snapshot is served *instantly* and a background thread
    refreshes it. Staleness is bounded to bucket changes made outside this app:
    uploads and deletes call `invalidate()`, which drops the entry so the next
    read blocks on a genuinely fresh scan.
 
-Only the empty prefix is cached — caching client-supplied `?prefix=` values
+Only the empty prefix is cached - caching client-supplied `?prefix=` values
 would grow unbounded. Thread-safe: the B2 handlers run in Starlette's
 threadpool.
 """
@@ -80,7 +80,7 @@ def _is_fresh(entry: tuple[float, list[dict]]) -> bool:
 def cached_listing(prefix: str, fetch: Fetch) -> list[dict]:
     """Return every object under `prefix`, reusing a recent scan when possible.
 
-    The returned list is shared and cached — callers must treat it as read-only
+    The returned list is shared and cached - callers must treat it as read-only
     (never sort/mutate in place). Propagates whatever `fetch` raises, except
     from a background refresh (logged, and the stale snapshot keeps serving).
     """
@@ -145,7 +145,7 @@ def _refresh(prefix: str, fetch: Fetch) -> None:
         _scan(prefix, fetch)
     except Exception as e:
         # A failed refresh must never surface to the user or kill the thread's
-        # process — the previous snapshot stays served until the next attempt.
+        # process - the previous snapshot stays served until the next attempt.
         logger.warning("Background listing refresh failed (prefix=%r): %s", prefix, e)
     finally:
         with _list_cache_lock:

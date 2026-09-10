@@ -1,6 +1,80 @@
 {
   "components": {
     "schemas": {
+      "CurationSummary": {
+        "description": "Aggregate curation metrics for the dashboard.",
+        "properties": {
+          "dedup_ratio": {
+            "title": "Dedup Ratio",
+            "type": "number"
+          },
+          "pass_rate": {
+            "title": "Pass Rate",
+            "type": "number"
+          },
+          "raw_bytes": {
+            "title": "Raw Bytes",
+            "type": "integer"
+          },
+          "raw_human": {
+            "title": "Raw Human",
+            "type": "string"
+          },
+          "recipe_count": {
+            "title": "Recipe Count",
+            "type": "integer"
+          },
+          "refined_bytes": {
+            "title": "Refined Bytes",
+            "type": "integer"
+          },
+          "refined_human": {
+            "title": "Refined Human",
+            "type": "string"
+          },
+          "run_count": {
+            "title": "Run Count",
+            "type": "integer"
+          },
+          "stats_bytes": {
+            "title": "Stats Bytes",
+            "type": "integer"
+          },
+          "stats_human": {
+            "title": "Stats Human",
+            "type": "string"
+          },
+          "total_filtered": {
+            "title": "Total Filtered",
+            "type": "integer"
+          },
+          "total_samples_in": {
+            "title": "Total Samples In",
+            "type": "integer"
+          },
+          "total_samples_out": {
+            "title": "Total Samples Out",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "recipe_count",
+          "run_count",
+          "raw_bytes",
+          "raw_human",
+          "refined_bytes",
+          "refined_human",
+          "stats_bytes",
+          "stats_human",
+          "total_samples_in",
+          "total_samples_out",
+          "total_filtered",
+          "pass_rate",
+          "dedup_ratio"
+        ],
+        "title": "CurationSummary",
+        "type": "object"
+      },
       "DailyUploadCount": {
         "properties": {
           "date": {
@@ -307,6 +381,117 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "OperatorCatalogEntry": {
+        "description": "One selectable operator surfaced to the recipe form.",
+        "properties": {
+          "default": {
+            "default": false,
+            "title": "Default",
+            "type": "boolean"
+          },
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "modalities": {
+            "items": {
+              "enum": [
+                "image-text",
+                "video",
+                "audio",
+                "text"
+              ],
+              "type": "string"
+            },
+            "title": "Modalities",
+            "type": "array"
+          },
+          "model_backed": {
+            "default": false,
+            "title": "Model Backed",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Params",
+            "type": "object"
+          }
+        },
+        "required": [
+          "name",
+          "label",
+          "modalities"
+        ],
+        "title": "OperatorCatalogEntry",
+        "type": "object"
+      },
+      "OperatorConfig": {
+        "description": "One Data-Juicer operator plus its numeric thresholds.\n\n`name` must be one of the finite operator catalog (service/recipes.py);\n`params` are per-operator numeric knobs (min/max thresholds). Kept as a\nfree-form numeric map so new catalog operators need no model change.",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Params",
+            "type": "object"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "OperatorConfig",
+        "type": "object"
+      },
+      "OperatorStat": {
+        "description": "Per-operator effect within a run, parsed from the engine's own output.",
+        "properties": {
+          "filtered": {
+            "title": "Filtered",
+            "type": "integer"
+          },
+          "kept_ratio": {
+            "title": "Kept Ratio",
+            "type": "number"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "samples_in": {
+            "title": "Samples In",
+            "type": "integer"
+          },
+          "samples_out": {
+            "title": "Samples Out",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "samples_in",
+          "samples_out",
+          "filtered",
+          "kept_ratio"
+        ],
+        "title": "OperatorStat",
+        "type": "object"
+      },
       "PresignUploadRequest": {
         "description": "What the browser declares before uploading directly to B2.",
         "properties": {
@@ -371,6 +556,283 @@
           "expires_in"
         ],
         "title": "PresignUploadResponse",
+        "type": "object"
+      },
+      "Recipe": {
+        "description": "A stored recipe, parsed back from its ``configs/<id>.yaml`` object.",
+        "properties": {
+          "config_key": {
+            "title": "Config Key",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "modality": {
+            "enum": [
+              "image-text",
+              "video",
+              "audio",
+              "text"
+            ],
+            "title": "Modality",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "operators": {
+            "items": {
+              "$ref": "#/components/schemas/OperatorConfig"
+            },
+            "title": "Operators",
+            "type": "array"
+          },
+          "source_prefix": {
+            "title": "Source Prefix",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "yaml": {
+            "title": "Yaml",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "modality",
+          "source_prefix",
+          "operators",
+          "created_at",
+          "updated_at",
+          "yaml",
+          "config_key"
+        ],
+        "title": "Recipe",
+        "type": "object"
+      },
+      "RecipeSpec": {
+        "description": "Create/edit input for a recipe (the form payload).",
+        "properties": {
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "modality": {
+            "enum": [
+              "image-text",
+              "video",
+              "audio",
+              "text"
+            ],
+            "title": "Modality",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "operators": {
+            "items": {
+              "$ref": "#/components/schemas/OperatorConfig"
+            },
+            "title": "Operators",
+            "type": "array"
+          },
+          "source_prefix": {
+            "default": "raw/",
+            "title": "Source Prefix",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "modality"
+        ],
+        "title": "RecipeSpec",
+        "type": "object"
+      },
+      "RunRecord": {
+        "description": "The full record of one curation pass.",
+        "properties": {
+          "dedup_ratio": {
+            "default": 0.0,
+            "title": "Dedup Ratio",
+            "type": "number"
+          },
+          "device": {
+            "default": "cpu",
+            "title": "Device",
+            "type": "string"
+          },
+          "duration_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Seconds"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "filtered": {
+            "default": 0,
+            "title": "Filtered",
+            "type": "integer"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kept_ratio": {
+            "default": 0.0,
+            "title": "Kept Ratio",
+            "type": "number"
+          },
+          "modality": {
+            "title": "Modality",
+            "type": "string"
+          },
+          "operators": {
+            "items": {
+              "$ref": "#/components/schemas/OperatorStat"
+            },
+            "title": "Operators",
+            "type": "array"
+          },
+          "recipe_id": {
+            "title": "Recipe Id",
+            "type": "string"
+          },
+          "recipe_name": {
+            "title": "Recipe Name",
+            "type": "string"
+          },
+          "refined_prefix": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refined Prefix"
+          },
+          "samples_in": {
+            "default": 0,
+            "title": "Samples In",
+            "type": "integer"
+          },
+          "samples_out": {
+            "default": 0,
+            "title": "Samples Out",
+            "type": "integer"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "stats_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stats Key"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "running",
+              "succeeded",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "recipe_id",
+          "recipe_name",
+          "modality",
+          "status",
+          "started_at"
+        ],
+        "title": "RunRecord",
+        "type": "object"
+      },
+      "SeedResult": {
+        "description": "Result of seeding a tiny synthetic demo corpus into ``raw/``.",
+        "properties": {
+          "created": {
+            "title": "Created",
+            "type": "integer"
+          },
+          "modality": {
+            "title": "Modality",
+            "type": "string"
+          },
+          "prefix": {
+            "title": "Prefix",
+            "type": "string"
+          }
+        },
+        "required": [
+          "created",
+          "prefix",
+          "modality"
+        ],
+        "title": "SeedResult",
         "type": "object"
       },
       "UploadStats": {
@@ -463,12 +925,78 @@
     }
   },
   "info": {
-    "description": "Local API for the Vibe Coding Starter Kit template, providing file upload and management backed by Backblaze B2. This contract documents the template's local API, not a hosted public endpoint.",
-    "title": "Vibe Coding Starter Kit API",
+    "description": "Local control-plane API for Data-Juicer Multimodal Curation: author and run Data-Juicer recipes that clean image-text, video, audio, and text corpora stored in Backblaze B2, writing refined shards and per-operator stats back to B2. This contract documents the app's local API, not a hosted public endpoint.",
+    "title": "Data-Juicer Multimodal Curation API",
     "version": "0.1.0"
   },
   "openapi": "3.1.0",
   "paths": {
+    "/curation/summary": {
+      "get": {
+        "description": "Curation dashboard aggregates (storage split, samples, ratios).",
+        "operationId": "curation_summary_endpoint_curation_summary_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurationSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Curation Summary Endpoint",
+        "tags": [
+          "curation"
+        ]
+      }
+    },
+    "/datasets/seed": {
+      "post": {
+        "description": "Generate a tiny synthetic demo corpus under ``raw/`` (keyless, no download).",
+        "operationId": "seed_dataset_endpoint_datasets_seed_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "modality",
+            "required": false,
+            "schema": {
+              "default": "image-text",
+              "title": "Modality",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeedResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Seed Dataset Endpoint",
+        "tags": [
+          "curation"
+        ]
+      }
+    },
     "/files": {
       "get": {
         "operationId": "list_files_endpoint_files_get",
@@ -999,9 +1527,340 @@
         ]
       }
     },
+    "/operator-catalog": {
+      "get": {
+        "description": "The finite Data-Juicer operator catalog the recipe form selects from.",
+        "operationId": "operator_catalog_endpoint_operator_catalog_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/OperatorCatalogEntry"
+                  },
+                  "title": "Response Operator Catalog Endpoint Operator Catalog Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Operator Catalog Endpoint",
+        "tags": [
+          "recipes"
+        ]
+      }
+    },
+    "/recipes": {
+      "get": {
+        "operationId": "list_recipes_endpoint_recipes_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Recipe"
+                  },
+                  "title": "Response List Recipes Endpoint Recipes Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Recipes Endpoint",
+        "tags": [
+          "recipes"
+        ]
+      },
+      "post": {
+        "operationId": "create_recipe_endpoint_recipes_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeSpec"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recipe"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Recipe Endpoint",
+        "tags": [
+          "recipes"
+        ]
+      }
+    },
+    "/recipes/{recipe_id}": {
+      "delete": {
+        "operationId": "delete_recipe_endpoint_recipes__recipe_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recipe_id",
+            "required": true,
+            "schema": {
+              "title": "Recipe Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Recipe Endpoint",
+        "tags": [
+          "recipes"
+        ]
+      },
+      "get": {
+        "operationId": "get_recipe_endpoint_recipes__recipe_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recipe_id",
+            "required": true,
+            "schema": {
+              "title": "Recipe Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recipe"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Recipe Endpoint",
+        "tags": [
+          "recipes"
+        ]
+      },
+      "put": {
+        "operationId": "update_recipe_endpoint_recipes__recipe_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recipe_id",
+            "required": true,
+            "schema": {
+              "title": "Recipe Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeSpec"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recipe"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Recipe Endpoint",
+        "tags": [
+          "recipes"
+        ]
+      }
+    },
+    "/recipes/{recipe_id}/run": {
+      "post": {
+        "description": "Run one curation pass for a recipe (synchronous, one at a time).",
+        "operationId": "run_recipe_endpoint_recipes__recipe_id__run_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "recipe_id",
+            "required": true,
+            "schema": {
+              "title": "Recipe Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunRecord"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Run Recipe Endpoint",
+        "tags": [
+          "recipes"
+        ]
+      }
+    },
+    "/runs": {
+      "get": {
+        "description": "History of curation passes, read back from ``stats/`` in B2.",
+        "operationId": "list_runs_endpoint_runs_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RunRecord"
+                  },
+                  "title": "Response List Runs Endpoint Runs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Runs Endpoint",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
+    "/runs/{run_id}": {
+      "get": {
+        "operationId": "get_run_endpoint_runs__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunRecord"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Run Endpoint",
+        "tags": [
+          "runs"
+        ]
+      }
+    },
     "/upload/presign": {
       "post": {
-        "description": "Validate a declared upload and hand back a presigned PUT.\n\nThe browser uploads the bytes straight to B2 with the returned URL, so they\nnever traverse this Function \u2014 that is what lifts Vercel's ~4.5 MB payload\nceiling. Size and content-type are signed into the URL (see the service).",
+        "description": "Validate a declared upload and hand back a presigned PUT.\n\nThe browser uploads the bytes straight to B2 with the returned URL, so they\nnever traverse this Function - that is what lifts Vercel's ~4.5 MB payload\nceiling. Size and content-type are signed into the URL (see the service).",
         "operationId": "presign_upload_upload_presign_post",
         "requestBody": {
           "content": {

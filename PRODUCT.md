@@ -6,20 +6,24 @@ product
 
 ## Users
 
-AI coding agents and "vibe coders" (developers who lean on AI to move fast) who clone
-this kit as the foundation for a new full-stack app. Their context: they want to skip
-the boilerplate loop (dashboard, upload, file browser, cloud storage wiring) and go
-straight to building their app's unique features. They read the repo, keep the shared
-scaffolding, and rebrand + rewrite the dashboard for their own use case.
+AI researchers and dataset engineers who clean heterogeneous foundation-model corpora —
+image-text pairs, video, audio, and text — that live in Backblaze B2. Their context:
+hundreds of TB of raw + refined multimodal data on B2, driven from a local box, with
+write amplification (refined shards + stats accumulating per pass) making B2 the natural
+home. They want reproducible, versioned cleaning (recipes) run on their own hardware
+with no managed cloud ETL and no second API key.
 
 ## Product Purpose
 
-An engineering-grade full-stack starter kit (Next.js 16 + React 19 + Tailwind v4 +
-shadcn/ui frontend, FastAPI backend) with Backblaze B2 cloud storage integrated out of
-the box. It ships a dashboard, drag-and-drop upload, and a file browser so builders
-start from a working app, not a blank page. Success = a builder can clone it, run it,
-rebrand it via one config file, and trust every screen enough to build on top without
-first fixing it.
+A local, B2-backed control plane for multimodal training-data curation, built on the
+[Data-Juicer](https://github.com/modelscope/data-juicer) engine (Next.js 16 + React 19 +
+Tailwind v4 + shadcn/ui frontend, FastAPI backend). Users author a Data-Juicer recipe
+(a composable operator chain — dedup, length/quality filters, resolution/aspect checks),
+store it as YAML in B2 `configs/`, then run it: the app streams raw shards from B2 `raw/`,
+applies the operators locally with Data-Juicer, and writes the refined dataset to
+`refined/` and per-operator stats to `stats/`. Success = a lab can keep its whole corpus
+on B2 and drive reproducible curation from a laptop, with every run's kept/filtered/dedup
+outcome recorded. Cost per run is $0 beyond B2 storage — there is no external AI provider.
 
 ## Maturity and Support Boundary
 

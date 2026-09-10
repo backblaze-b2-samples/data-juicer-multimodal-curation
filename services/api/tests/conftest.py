@@ -12,7 +12,7 @@ def deny_external_network(monkeypatch):
 
     Only *external* connections are rejected. Loopback stays open so in-process
     localhost servers and platform event-loop self-pipes (e.g. asyncio's
-    socketpair emulation on Windows) keep working — the goal is to block real
+    socketpair emulation on Windows) keep working - the goal is to block real
     B2/external traffic, not all sockets."""
 
     real_connect = socket.socket.connect
@@ -52,7 +52,7 @@ def clear_list_cache():
 
 @pytest.fixture(autouse=True)
 def reset_rate_limiter():
-    """Reset the per-IP rate-limit counters before each test — otherwise the
+    """Reset the per-IP rate-limit counters before each test - otherwise the
     whole suite shares one client IP and accumulates hits across tests."""
     from app.runtime import ratelimit
 

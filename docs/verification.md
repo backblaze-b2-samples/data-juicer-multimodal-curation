@@ -221,6 +221,25 @@ If a fresh clone fails dependency installation, first confirm that
 `services/api/requirements.lock` is present and rerun `pnpm run setup`; do not
 run an unconstrained install from `requirements.txt` as a recovery shortcut.
 
+### Gated curation engine (Data-Juicer)
+
+`services/api/requirements-ml.txt` pins the Data-Juicer curation engine
+(`py-data-juicer`, which pulls torch + HuggingFace `datasets`). It is
+**deliberately excluded** from `requirements.lock`, `pnpm run setup`, and CI, so
+the credential-free `pnpm verify` gate stays fast and green on the base venv. The
+curation-run tests (`services/api/tests/test_curation.py`) run on that base venv
+and exercise the engine-unavailable branch — that is expected, not a gap. To run
+real curation passes, install the engine into the API venv:
+
+```bash
+services/api/.venv/bin/pip install -r services/api/requirements-ml.txt
+```
+
+Data-Juicer runs in an isolated subprocess (`app/service/curation_worker.py`), so
+a native crash cannot take down the API; the run is recorded as `failed` instead.
+Device auto-detects CUDA → MPS → CPU (CPU default); ML-backed operators fall back
+CUDA → CPU where MPS support is weak.
+
 ## Agent-docs check
 
 `pnpm check:agent-docs` validates the canonical `AGENTS.md` surface, including

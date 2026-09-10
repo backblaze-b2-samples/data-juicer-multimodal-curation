@@ -71,3 +71,96 @@ export interface UploadStats {
   uploads_today: number;
   total_downloads: number;
 }
+
+// --- Curation domain -------------------------------------------------------
+
+export type Modality = "image-text" | "video" | "audio" | "text";
+
+export type RunStatus = "pending" | "running" | "succeeded" | "failed";
+
+export interface OperatorConfig {
+  name: string;
+  params: Record<string, number>;
+}
+
+export interface OperatorCatalogEntry {
+  name: string;
+  label: string;
+  modalities: Modality[];
+  model_backed: boolean;
+  default: boolean;
+  description: string;
+  params: Record<string, { default?: number; hint?: string }>;
+}
+
+export interface RecipeSpec {
+  name: string;
+  modality: Modality;
+  source_prefix: string;
+  operators: OperatorConfig[];
+  description: string;
+}
+
+export interface Recipe {
+  id: string;
+  name: string;
+  modality: Modality;
+  source_prefix: string;
+  operators: OperatorConfig[];
+  description: string;
+  created_at: string;
+  updated_at: string;
+  yaml: string;
+  config_key: string;
+}
+
+export interface OperatorStat {
+  name: string;
+  samples_in: number;
+  samples_out: number;
+  filtered: number;
+  kept_ratio: number;
+}
+
+export interface RunRecord {
+  id: string;
+  recipe_id: string;
+  recipe_name: string;
+  modality: string;
+  status: RunStatus;
+  samples_in: number;
+  samples_out: number;
+  filtered: number;
+  kept_ratio: number;
+  dedup_ratio: number;
+  device: string;
+  refined_prefix: string | null;
+  stats_key: string | null;
+  operators: OperatorStat[];
+  error: string | null;
+  started_at: string;
+  finished_at: string | null;
+  duration_seconds: number | null;
+}
+
+export interface CurationSummary {
+  recipe_count: number;
+  run_count: number;
+  raw_bytes: number;
+  raw_human: string;
+  refined_bytes: number;
+  refined_human: string;
+  stats_bytes: number;
+  stats_human: string;
+  total_samples_in: number;
+  total_samples_out: number;
+  total_filtered: number;
+  pass_rate: number;
+  dedup_ratio: number;
+}
+
+export interface SeedResult {
+  created: number;
+  prefix: string;
+  modality: string;
+}

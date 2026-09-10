@@ -4,17 +4,18 @@
 ## Components
 
 - **apps/web/** — Next.js 16 frontend (App Router, Tailwind v4, shadcn/ui)
-  - Dashboard with stats, upload chart, recent uploads
-  - File upload with drag-and-drop, progress tracking
-  - File browser with preview, download, delete
+  - Curation dashboard (recipes, runs, raw vs refined storage, ratios)
+  - Recipes: CRUD + run UI for Data-Juicer operator chains (`/recipes`)
+  - Runs: per-operator curation stats history (`/runs`)
+  - Datasets Library: modality-aware, prefix-scoped browse (`/datasets`)
+  - Kept starter surfaces: full-bucket File Explorer + drag-and-drop Upload
   - Dark mode via `next-themes`
 - **services/api/** — FastAPI backend (layered architecture)
-  - REST API for file upload, listing, deletion
-  - B2 S3 integration via boto3
+  - REST API for recipes, runs, curation summary, dataset seeding, file ops
+  - B2 S3 integration via boto3 (custom user agent, S3-compatible API only)
+  - Data-Juicer curation engine, run in an isolated subprocess
   - File metadata extraction (images, PDFs)
-  - Health check endpoint with B2 connectivity verification
-  - Structured JSON logging with request tracing
-  - Prometheus-format metrics endpoint
+  - Health check, structured JSON logging, Prometheus-format metrics
 - **packages/shared/** — TypeScript type definitions
   - Mirrors Pydantic models from the API
   - Consumed by `apps/web/` as workspace dependency
@@ -49,13 +50,19 @@ runtime/   FastAPI routes — calls service, never repo directly
 services/api/
   main.py                  App entrypoint, middleware, router registration
   app/
-    types/                 Pydantic models (FileMetadata, UploadStats, etc.)
+    types/                 Pydantic models (recipes, runs, files, upload, stats)
     config/                Settings loaded from environment
-    repo/                  B2 S3 client (data access layer)
-    service/               Business logic (upload, files, metadata)
-    runtime/               FastAPI route handlers
+    repo/                  B2 S3 client + dataset object I/O (data access layer)
+    service/               Business logic (recipes, curation, operators, seed, files)
+    runtime/               FastAPI route handlers (recipes, runs, curation, files)
+  requirements.txt         Base deps (installed by setup/CI)
+  requirements-ml.txt      Gated Data-Juicer engine (NOT installed by setup/CI)
   tests/                   pytest tests (structural + integration)
 ```
+
+The Data-Juicer engine (`app/service/curation_worker.py`) is imported **only**
+in the subprocess it is spawned into — never in the FastAPI worker — enforced by
+`tests/test_curation_containment.py`, mirroring the boto3-in-repo boundary.
 
 ## Boundary Invariants
 
@@ -92,14 +99,25 @@ External provisioning and deployment remain explicit user-approved actions.
 
 ## Data Stores
 
-- **Backblaze B2** — object storage (S3-compatible API)
-  - All uploaded files stored in a single bucket
-  - File listing and metadata via S3 `list_objects_v2` / `head_object`
-  - No application database — B2 is the sole data store
+- **Backblaze B2** — object storage (S3-compatible API), the sole data store (no database)
+  - `raw/` — source corpora (uploaded or seeded); each corpus is a JSONL shard (+ referenced media)
+  - `configs/` — recipes, one `configs/<id>.yaml` object per recipe
+  - `refined/` — cleaned datasets, `refined/<run_id>/refined.jsonl`
+  - `stats/` — run records, `stats/<run_id>.json`
+  - `uploads/` — objects landed via the kept Upload page
+  - All access via S3 `list_objects_v2` / `get_object` / `put_object` / `head_object` / `delete_object` / `generate_presigned_url`
+
+## Curation engine (Data-Juicer)
+
+- **Engine**: [Data-Juicer](https://github.com/modelscope/data-juicer) (`py-data-juicer`), a gated ML dependency in `services/api/requirements-ml.txt` — never installed by `pnpm run setup` or CI, so the credential-free gates stay fast.
+- **Isolation**: a run spawns `python -m app.service.curation_worker` as a subprocess against a temp Data-Juicer config. Torch/multiprocessing state and any native crash stay out of the FastAPI worker; a non-zero exit becomes a typed `failed` run, never a 500.
+- **Device autodetect**: first available of CUDA → Apple MPS → CPU, defaulting to CPU; no hard GPU requirement. Data-Juicer's ML-backed operators run on torch where MPS coverage is weak, so those effectively fall back CUDA → CPU. The default demo recipe uses only lightweight CPU operators (no model download).
+- **Containment**: one run at a time (a module-level lock), a run timeout, and best-effort per-operator stats parsed from the engine's own log. Data-Juicer never gets its own S3 client — all B2 I/O goes through the repo layer's custom-UA boto3 client.
 
 ## External Services
 
-- **Backblaze B2 S3 API** — file storage, retrieval, deletion, presigned URLs
+- **Backblaze B2 S3 API** — storage, retrieval, deletion, presigned URLs
+- **Data-Juicer** — on-device OSS curation engine (no external API, no second key, $0/run)
 
 ## Trust Boundaries
 
@@ -111,10 +129,11 @@ See [docs/SECURITY.md](docs/SECURITY.md) for full security documentation.
 
 ## Data Flows
 
-- **Upload**: Browser -> `POST /upload/presign` (API validates the declared file + signs a PUT) -> Browser PUTs bytes **directly to B2** -> `POST /upload/verify` (API HEADs + Range-sniffs the stored object) -> response
-- **List**: Browser -> `GET /files` -> service calls repo -> returns file list
-- **Download**: Browser -> `GET /files/{key}/download` -> service validates key -> repo generates presigned URL -> browser downloads
-- **Delete**: Browser -> `DELETE /files/{key}` -> service validates key -> repo deletes from B2
+- **Recipe CRUD**: Browser -> `/recipes` routes -> service renders/parses YAML -> repo `put/get/list/delete` on `configs/*.yaml`
+- **Curation run**: Browser -> `POST /recipes/{id}/run` -> service reads the recipe, downloads `raw/` shards (+ media) to a temp dir, builds a Data-Juicer config, runs the engine in a subprocess, uploads `refined/<run>/` + `stats/<run>.json` -> returns the `RunRecord`
+- **Seed**: Browser -> `POST /datasets/seed` -> service generates a synthetic corpus (PIL images + text JSONL) -> repo writes it under `raw/`
+- **Upload**: Browser -> `POST /upload/presign` -> Browser PUTs bytes **directly to B2** -> `POST /upload/verify` -> response
+- **List / Download / Delete** (files + datasets): Browser -> `/files` routes -> service validates -> repo lists / presigns / deletes
 
 ## Observability
 
@@ -150,9 +169,12 @@ silently drift from FastAPI. `GET /metrics` is intentionally server-only.
 
 ## Core Features
 
+- [Curation Recipes](docs/features/recipes.md)
+- [Curation Run](docs/features/curation-run.md)
+- [Datasets Library](docs/features/datasets-library.md)
+- [Dashboard](docs/features/dashboard.md)
 - [File Upload](docs/features/file-upload.md)
 - [File Browser](docs/features/file-browser.md)
-- [Dashboard](docs/features/dashboard.md)
 - [Metadata Extraction](docs/features/metadata-extraction.md)
 
 ## References

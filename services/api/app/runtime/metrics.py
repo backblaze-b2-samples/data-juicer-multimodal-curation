@@ -88,7 +88,7 @@ async def timing_middleware(request: Request, call_next):
         # `Access-Control-Allow-Origin`. If this catch lived outside CORS (or we
         # let the exception bubble to Starlette's ServerErrorMiddleware, which
         # always sits OUTSIDE CORS), the browser would block the 500 and the UI
-        # would only see an opaque "network error" — hiding the real bug.
+        # would only see an opaque "network error" - hiding the real bug.
         logger.error(
             "Unhandled exception: %s %s",
             request.method,
@@ -108,7 +108,7 @@ async def timing_middleware(request: Request, call_next):
     duration = time.time() - start
     # Use the matched route template to avoid unbounded cardinality. Requests
     # that never routed (404s, or 429s short-circuited by the rate limiter)
-    # have no route — collapse them to one label instead of the raw URL, or a
+    # have no route - collapse them to one label instead of the raw URL, or a
     # flood of distinct rejected paths would mint a metric series each.
     route = request.scope.get("route")
     path = route.path if route else "<unmatched>"

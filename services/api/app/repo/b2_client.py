@@ -33,9 +33,9 @@ def _split_key(key: str) -> tuple[str, str]:
 
 def _public_url(key: str) -> str | None:
     """Build a public URL for an object key, percent-encoding the path."""
-    if not settings.b2_public_url:
+    if not settings.b2_public_url_base:
         return None
-    return f"{settings.b2_public_url}/{quote(key, safe='/')}"
+    return f"{settings.b2_public_url_base}/{quote(key, safe='/')}"
 
 
 @functools.lru_cache(maxsize=1)
@@ -43,14 +43,15 @@ def get_s3_client():
     return boto3.client(
         "s3",
         endpoint_url=settings.b2_endpoint,
-        aws_access_key_id=settings.b2_key_id,
+        region_name=settings.b2_region,
+        aws_access_key_id=settings.b2_application_key_id,
         aws_secret_access_key=settings.b2_application_key,
         config=Config(
             connect_timeout=5,
             read_timeout=30,
             retries={"mode": "standard", "total_max_attempts": 3},
             signature_version="s3v4",
-            user_agent_extra="b2ai-oss-start",
+            user_agent_extra="b2ai-data-juicer-multimodal-curation",
         ),
     )
 
@@ -111,7 +112,7 @@ def upload_file(
 def _list_all_objects(prefix: str = "") -> list[dict]:
     """Every object under `prefix`, via the shared single-flight listing cache.
 
-    The returned list is shared and cached — callers must treat it as read-only
+    The returned list is shared and cached - callers must treat it as read-only
     (never sort/mutate in place). Raises RuntimeError on S3 failure.
     """
     return cached_listing(prefix, _fetch_all_objects)
@@ -151,7 +152,7 @@ def list_files(prefix: str = "") -> list[FileMetadata]:
     """List all files under `prefix`.
 
     Paginates the whole prefix so callers see every object, not just the first
-    1000. Order is unspecified — callers that need newest-first sort themselves
+    1000. Order is unspecified - callers that need newest-first sort themselves
     (see `service.files.get_files`). Raises RuntimeError on S3 failure.
     """
     files: list[FileMetadata] = []
@@ -221,7 +222,7 @@ def get_presigned_url(
 
     `disposition` selects the `Content-Disposition` the signed response will
     carry. "attachment" (the default) makes browsers save the file; "inline"
-    lets them render it in place, which the preview modal needs — an
+    lets them render it in place, which the preview modal needs - an
     `attachment` response makes an `<iframe>` PDF preview impossible because
     the browser starts a download instead of painting the document.
     Raises ValueError for any other value.

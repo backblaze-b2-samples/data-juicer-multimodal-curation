@@ -22,7 +22,7 @@ async def presign_upload(req: PresignUploadRequest):
     """Validate a declared upload and hand back a presigned PUT.
 
     The browser uploads the bytes straight to B2 with the returned URL, so they
-    never traverse this Function — that is what lifts Vercel's ~4.5 MB payload
+    never traverse this Function - that is what lifts Vercel's ~4.5 MB payload
     ceiling. Size and content-type are signed into the URL (see the service).
     """
     try:

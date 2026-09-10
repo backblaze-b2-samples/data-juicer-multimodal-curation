@@ -1,7 +1,7 @@
 """Per-IP fixed-window rate limiting.
 
 Every endpoint is unauthenticated, so without throttling a client can hammer
-the expensive list/stats endpoints or loop delete/download calls — a DoS and a
+the expensive list/stats endpoints or loop delete/download calls - a DoS and a
 Backblaze transaction/egress cost-amplification vector. This is a small,
 dependency-free fixed-window limiter.
 
@@ -32,7 +32,7 @@ _state: dict[tuple[str, str], tuple[float, int]] = {}
 def _client_ip(request: Request) -> str:
     """Best-effort client IP.
 
-    Trust only the RIGHTMOST `X-Forwarded-For` entry — the address the trusted
+    Trust only the RIGHTMOST `X-Forwarded-For` entry - the address the trusted
     edge proxy (Railway) appended. The leftmost entries are client-supplied and
     trivially spoofable; keying on them would let a caller mint a fresh limiter
     bucket per request (bypassing the limit and ballooning `_state`). Behind

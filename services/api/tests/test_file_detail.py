@@ -64,7 +64,7 @@ async def test_detail_returns_checksums_for_text_file(client, monkeypatch):
     assert body["sha256"] == hashlib.sha256(TEXT_BYTES).hexdigest()
     assert body["extension"] == "txt"
     # The stored object's real upload time (head_object LastModified) is
-    # threaded through the recompute — not the recompute wall-clock time.
+    # threaded through the recompute - not the recompute wall-clock time.
     assert body["uploaded_at"].startswith("2026-01-02T03:04:05")
     # Non-image / non-PDF: media/image/pdf fields stay null.
     assert body["image_width"] is None

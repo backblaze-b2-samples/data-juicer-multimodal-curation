@@ -2,7 +2,7 @@ import logging
 
 # NOTE: the B2-backed handlers below are intentionally sync `def`, not
 # `async def`. The whole call chain is blocking boto3, and an `async def`
-# handler runs directly on the event loop — a single slow bucket scan would
+# handler runs directly on the event loop - a single slow bucket scan would
 # then stall every other request (Railway runs one worker). Starlette runs
 # sync handlers in its threadpool, giving real concurrency for B2 I/O.
 from fastapi import APIRouter, HTTPException
@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 # SECURITY: these routes are intentionally UNAUTHENTICATED and bucket-wide
-# (single-tenant demo stance — see docs/SECURITY.md, "Authentication &
+# (single-tenant demo stance - see docs/SECURITY.md, "Authentication &
 # Multi-Tenancy"). Adding a login screen to a clone is NOT enough: you must
 # add your auth dependency to every route here AND scope listings/reads to
 # the caller's own prefixes in service/files.py, or one signed-in user can

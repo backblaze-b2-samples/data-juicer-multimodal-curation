@@ -1,0 +1,21 @@
+# Data-Juicer curation engine — GATED, heavy ML closure. NOT installed by
+# `pnpm run setup` or CI (they install requirements.lock only), so the
+# credential-free `pnpm verify` gate stays fast and green on a base venv.
+#
+# The curation runner lazily imports Data-Juicer in an isolated subprocess
+# (app/service/curation_worker.py). With this file uninstalled, a run is
+# persisted as `failed` with an actionable "install requirements-ml.txt"
+# message and the POST never 500s (see app/service/curation.py and the
+# regression test tests/test_curation_engine_unavailable.py).
+#
+# Install into the API venv on a supported machine to run real curation passes:
+#   services/api/.venv/bin/pip install -r services/api/requirements-ml.txt
+#
+# Data-Juicer pulls torch + HuggingFace `datasets` and a large dependency
+# closure; on macOS arm64 / CPU the default demo recipe uses only lightweight
+# CPU operators (text + PIL/imagededup image ops) so no model download or GPU
+# is required. Device auto-detects CUDA -> MPS -> CPU (ML-backed operators fall
+# back CUDA -> CPU because torch MPS coverage is weak). See ARCHITECTURE.md.
+#
+# Pinned to a tested window; widen only after re-resolving in a fresh py312 venv.
+py-data-juicer>=1.0.0,<1.5

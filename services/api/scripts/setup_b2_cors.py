@@ -13,7 +13,7 @@ Usage:
     python services/api/scripts/setup_b2_cors.py --origin https://your-app.vercel.app --apply
 
 Reads B2 credentials from the repo-root .env exactly like the app. It MERGES:
-existing CORS rules are preserved and one rule (ID `vcsk-direct-upload`) is
+existing CORS rules are preserved and one rule (ID `djmc-direct-upload`) is
 added/updated for the given origins. Never prints credentials.
 """
 
@@ -34,7 +34,7 @@ if str(API_ROOT) not in sys.path:
     sys.path.insert(0, str(API_ROOT))
 from app.config import settings  # noqa: E402
 
-RULE_ID = "vcsk-direct-upload"
+RULE_ID = "djmc-direct-upload"
 
 
 def out(message: str) -> None:
@@ -47,17 +47,15 @@ def err(message: str) -> None:
 
 def _client():
     # Standalone client (not app.repo.get_s3_client) on purpose: bucket-level
-    # CORS calls sign more reliably with an explicit region derived from the
-    # endpoint, whereas the app client leaves region unset for object ops.
-    host = settings.b2_endpoint.split("://", 1)[-1]
-    region = host.split(".")[1] if host.startswith("s3.") else "us-east-005"
+    # CORS calls sign more reliably with an explicit region. The region is the
+    # configured B2_REGION (single source of truth) - never a hardcoded literal.
     return boto3.client(
         "s3",
         endpoint_url=settings.b2_endpoint,
-        aws_access_key_id=settings.b2_key_id,
+        aws_access_key_id=settings.b2_application_key_id,
         aws_secret_access_key=settings.b2_application_key,
-        region_name=region,
-        config=Config(signature_version="s3v4", user_agent_extra="b2ai-oss-start"),
+        region_name=settings.b2_region,
+        config=Config(signature_version="s3v4", user_agent_extra="b2ai-data-juicer-multimodal-curation"),
     )
 
 
@@ -93,7 +91,7 @@ def main() -> int:
             parser.error(f"origin must be scheme://host with no trailing slash: {origin!r}")
 
     if not settings.b2_bucket_name:
-        err("B2_BUCKET_NAME is not set — configure .env first.")
+        err("B2_BUCKET_NAME is not set - configure .env first.")
         return 2
 
     client = _client()
@@ -115,7 +113,7 @@ def main() -> int:
     out(json.dumps(our_rule, indent=2))
 
     if not args.apply:
-        out("\nDry run — re-run with --apply to write this change.")
+        out("\nDry run - re-run with --apply to write this change.")
         return 0
 
     client.put_bucket_cors(

@@ -2,7 +2,7 @@
 
 `list_objects_v2` returns at most 1000 keys per response. These tests use a
 fake client that reports `IsTruncated` so we verify the continuation token is
-followed and every page is collected — the bug where stats/listings silently
+followed and every page is collected - the bug where stats/listings silently
 capped at the first page.
 """
 
@@ -73,7 +73,7 @@ def test_empty_prefix_listing_is_cached(monkeypatch):
     b2_client.list_files()
     b2_client.list_files()
 
-    # Second call is served from cache — only the first scan hit B2 (2 pages).
+    # Second call is served from cache - only the first scan hit B2 (2 pages).
     assert client.calls == 2
 
 
@@ -92,6 +92,6 @@ def test_mutation_invalidates_cache(monkeypatch):
 
     b2_client.list_files()  # scan + cache (2 pages)
     b2_client._invalidate_list_cache()
-    b2_client.list_files()  # cache voided → rescan (2 more)
+    b2_client.list_files()  # cache voided -> rescan (2 more)
 
     assert client.calls == 4

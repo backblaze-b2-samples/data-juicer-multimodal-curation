@@ -34,11 +34,12 @@ def test_openapi_metadata_uses_canonical_local_api_identity():
     schema = app.openapi()
 
     assert schema["info"] == {
-        "title": "Vibe Coding Starter Kit API",
+        "title": "Data-Juicer Multimodal Curation API",
         "description": (
-            "Local API for the Vibe Coding Starter Kit template, providing file "
-            "upload and management backed by Backblaze B2. This contract "
-            "documents the template's local API, not a hosted public endpoint."
+            "Local control-plane API for Data-Juicer Multimodal Curation: author and run "
+            "Data-Juicer recipes that clean image-text, video, audio, and text corpora "
+            "stored in Backblaze B2, writing refined shards and per-operator stats back "
+            "to B2. This contract documents the app's local API, not a hosted public endpoint."
         ),
         "version": "0.1.0",
     }

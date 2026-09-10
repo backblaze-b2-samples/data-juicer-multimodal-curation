@@ -2,9 +2,9 @@
 
 `_counter_path()` walks up from this module's `__file__` to the repo root so
 runtime state stays outside `uvicorn --reload`'s watch tree. A deployment that
-ships *only* services/api has no repo root above it — Railway with the service
+ships *only* services/api has no repo root above it - Railway with the service
 root directory set to services/api, or a Docker build that copies just this
-directory — and indexing past the filesystem root raised IndexError at import
+directory - and indexing past the filesystem root raised IndexError at import
 time, taking the whole API down before it could serve a request. Both layouts
 are pinned here so the anchoring cannot silently regress to either extreme.
 """
@@ -47,5 +47,5 @@ def test_anchors_at_service_root_when_only_the_service_is_deployed(
 def test_absolute_setting_bypasses_anchoring(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(settings, "download_count_file", "/var/lib/vcsk/count.json")
-    assert counter._counter_path() == Path("/var/lib/vcsk/count.json")
+    monkeypatch.setattr(settings, "download_count_file", "/var/lib/djmc/count.json")
+    assert counter._counter_path() == Path("/var/lib/djmc/count.json")

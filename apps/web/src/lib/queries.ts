@@ -8,19 +8,35 @@ import {
 } from "@tanstack/react-query";
 import {
   ApiError,
+  createRecipe,
   deleteFile,
+  deleteRecipe,
+  getCurationSummary,
   getDownloadUrl,
   getFileDetail,
   getFiles,
   getFileStats,
   getHealth,
+  getOperatorCatalog,
   getPreviewUrl,
+  getRecipe,
+  getRecipes,
+  getRun,
+  getRuns,
   getUploadActivity,
+  runRecipe,
+  seedDataset,
+  updateRecipe,
 } from "@/lib/api-client";
 import type {
+  CurationSummary,
   FileMetadata,
   FileMetadataDetail,
-} from "@vibe-coding-starter-kit/shared";
+  OperatorCatalogEntry,
+  Recipe,
+  RecipeSpec,
+  RunRecord,
+} from "@data-juicer-multimodal-curation/shared";
 
 // Single source of truth for query keys. Keep these tightly scoped so that
 // invalidating "files" doesn't blow away unrelated caches, and so an IDE
@@ -35,6 +51,12 @@ export const qk = {
   preview: (key: string) => [...qk.all, "preview", key] as const,
   detail: (key: string) => [...qk.all, "detail", key] as const,
   health: () => [...qk.all, "health"] as const,
+  operatorCatalog: () => [...qk.all, "operator-catalog"] as const,
+  recipes: () => [...qk.all, "recipes"] as const,
+  recipe: (id: string) => [...qk.all, "recipes", id] as const,
+  runs: () => [...qk.all, "runs"] as const,
+  run: (id: string) => [...qk.all, "runs", id] as const,
+  curationSummary: () => [...qk.all, "curation-summary"] as const,
 };
 
 export type Health = Awaited<ReturnType<typeof getHealth>>;
@@ -166,6 +188,109 @@ export function useDeleteFile() {
       // activity) against the server in the background.
       dropDeletedFileFromCache(qc, fileKey);
       qc.invalidateQueries({ queryKey: qk.all });
+    },
+  });
+}
+
+// --- Curation hooks ---------------------------------------------------------
+
+export function useOperatorCatalog() {
+  return useQuery<OperatorCatalogEntry[], ApiError>({
+    queryKey: qk.operatorCatalog(),
+    queryFn: getOperatorCatalog,
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useRecipes() {
+  return useQuery<Recipe[], ApiError>({
+    queryKey: qk.recipes(),
+    queryFn: getRecipes,
+  });
+}
+
+export function useRecipe(id: string | undefined) {
+  return useQuery<Recipe, ApiError>({
+    queryKey: qk.recipe(id ?? ""),
+    queryFn: () => getRecipe(id as string),
+    enabled: !!id,
+  });
+}
+
+export function useRuns() {
+  return useQuery<RunRecord[], ApiError>({
+    queryKey: qk.runs(),
+    queryFn: getRuns,
+  });
+}
+
+export function useRun(id: string | undefined) {
+  return useQuery<RunRecord, ApiError>({
+    queryKey: qk.run(id ?? ""),
+    queryFn: () => getRun(id as string),
+    enabled: !!id,
+  });
+}
+
+export function useCurationSummary() {
+  return useQuery<CurationSummary, ApiError>({
+    queryKey: qk.curationSummary(),
+    queryFn: getCurationSummary,
+  });
+}
+
+export function useCreateRecipe() {
+  const qc = useQueryClient();
+  return useMutation<Recipe, ApiError, RecipeSpec>({
+    mutationFn: (spec) => createRecipe(spec),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.recipes() }),
+  });
+}
+
+export function useUpdateRecipe(id: string) {
+  const qc = useQueryClient();
+  return useMutation<Recipe, ApiError, RecipeSpec>({
+    mutationFn: (spec) => updateRecipe(id, spec),
+    onSuccess: (recipe) => {
+      qc.invalidateQueries({ queryKey: qk.recipes() });
+      qc.setQueryData(qk.recipe(id), recipe);
+    },
+  });
+}
+
+export function useDeleteRecipe() {
+  const qc = useQueryClient();
+  return useMutation<{ deleted: boolean; id: string }, ApiError, string>({
+    mutationFn: (id) => deleteRecipe(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.recipes() }),
+  });
+}
+
+/**
+ * Run one curation pass. A mutation (server side effect, never cached): on
+ * success it invalidates runs, the dashboard summary, and the file listings so
+ * the new refined/ and stats/ objects appear.
+ */
+export function useRunRecipe() {
+  const qc = useQueryClient();
+  return useMutation<RunRecord, ApiError, string>({
+    mutationFn: (id) => runRecipe(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.runs() });
+      qc.invalidateQueries({ queryKey: qk.curationSummary() });
+      qc.invalidateQueries({ queryKey: [...qk.all, "files"] });
+      qc.invalidateQueries({ queryKey: qk.stats() });
+    },
+  });
+}
+
+export function useSeedDataset() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (modality: "text" | "image-text") => seedDataset(modality),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [...qk.all, "files"] });
+      qc.invalidateQueries({ queryKey: qk.curationSummary() });
     },
   });
 }

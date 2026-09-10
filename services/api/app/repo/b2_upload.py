@@ -22,7 +22,7 @@ def generate_presigned_upload(
     ``Content-Length`` and ``Content-Type`` are signed into the URL, so B2
     refuses a body of any other size (``403 SignatureDoesNotMatch``) or type.
     That is how the direct path keeps the size/type enforcement the old proxy
-    did in-process — B2's S3 API has no browser POST-policy
+    did in-process - B2's S3 API has no browser POST-policy
     (``content-length-range``) support. Raises RuntimeError on S3 failure.
     """
     client = get_s3_client()
@@ -67,7 +67,7 @@ def invalidate_listing() -> None:
     """Drop the shared listing cache.
 
     The direct-upload path stores the object via the browser, so the app never
-    calls ``upload_file`` and nothing else invalidates the cache — the new
+    calls ``upload_file`` and nothing else invalidates the cache - the new
     object would otherwise not appear in ``/files`` or ``/files/stats`` until
     the TTL.
     """

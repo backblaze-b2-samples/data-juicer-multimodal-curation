@@ -94,7 +94,7 @@ def test_only_one_background_refresh_runs_at_a_time(monkeypatch):
         list_cache.cached_listing("", fetch)
 
     assert _wait_for(lambda: not list_cache._refreshing)
-    # Five stale reads, one refresh — not five concurrent bucket scans.
+    # Five stale reads, one refresh - not five concurrent bucket scans.
     assert fetch.calls == 2
 
 
@@ -129,7 +129,7 @@ def test_prewarm_populates_without_a_caller_waiting(monkeypatch):
 
     assert _wait_for(lambda: not list_cache._refreshing and fetch.calls == 1)
     assert list_cache._entry("") is not None
-    # The warm entry is what the first request reads — no second scan.
+    # The warm entry is what the first request reads - no second scan.
     assert list_cache.cached_listing("", fetch) == [{"Key": "call-1"}]
     assert fetch.calls == 1
 

@@ -1,11 +1,17 @@
 import type {
+  CurationSummary,
   DailyUploadCount,
   FileMetadata,
   FileMetadataDetail,
   FileUploadResponse,
+  OperatorCatalogEntry,
   PresignUploadResponse,
+  Recipe,
+  RecipeSpec,
+  RunRecord,
+  SeedResult,
   UploadStats,
-} from "@vibe-coding-starter-kit/shared";
+} from "@data-juicer-multimodal-curation/shared";
 
 // Single-origin deploys (Vercel `services`: one project serving web + API) put
 // the API under /api on the same origin, so no NEXT_PUBLIC_API_URL is needed —
@@ -17,7 +23,7 @@ export const API_BASE =
   (process.env.NODE_ENV === "production" ? "/api" : "http://localhost:8000");
 
 type ApiClientRoute = {
-  method: "delete" | "get" | "post";
+  method: "delete" | "get" | "post" | "put";
   path: string;
 };
 
@@ -41,7 +47,23 @@ export const API_CLIENT_ROUTES = {
   // payload ceiling no longer caps upload size.
   uploadPresign: { method: "post", path: "/upload/presign" },
   uploadVerify: { method: "post", path: "/upload/verify" },
+  // Curation: recipes (the primary entity), runs, dashboard summary, seed.
+  operatorCatalog: { method: "get", path: "/operator-catalog" },
+  recipes: { method: "get", path: "/recipes" },
+  createRecipe: { method: "post", path: "/recipes" },
+  recipeById: { method: "get", path: "/recipes/{recipe_id}" },
+  updateRecipe: { method: "put", path: "/recipes/{recipe_id}" },
+  deleteRecipe: { method: "delete", path: "/recipes/{recipe_id}" },
+  runRecipe: { method: "post", path: "/recipes/{recipe_id}/run" },
+  runs: { method: "get", path: "/runs" },
+  runById: { method: "get", path: "/runs/{run_id}" },
+  curationSummary: { method: "get", path: "/curation/summary" },
+  seedDataset: { method: "post", path: "/datasets/seed" },
 } as const satisfies Record<string, ApiClientRoute>;
+
+function recipePath(template: string, recipeId: string): string {
+  return template.replace("{recipe_id}", encodeURIComponent(recipeId));
+}
 
 /** Typed API error with HTTP status code for caller-side branching. */
 export class ApiError extends Error {
@@ -350,4 +372,74 @@ function putFileToStorage(
     }
     xhr.send(file);
   });
+}
+
+// --- Curation ---------------------------------------------------------------
+
+export async function getOperatorCatalog() {
+  return apiFetch<OperatorCatalogEntry[]>(API_CLIENT_ROUTES.operatorCatalog.path);
+}
+
+export async function getRecipes() {
+  return apiFetch<Recipe[]>(API_CLIENT_ROUTES.recipes.path);
+}
+
+export async function getRecipe(recipeId: string) {
+  return apiFetch<Recipe>(
+    recipePath(API_CLIENT_ROUTES.recipeById.path, recipeId)
+  );
+}
+
+export async function createRecipe(spec: RecipeSpec) {
+  return apiFetch<Recipe>(API_CLIENT_ROUTES.createRecipe.path, {
+    method: API_CLIENT_ROUTES.createRecipe.method.toUpperCase(),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(spec),
+  });
+}
+
+export async function updateRecipe(recipeId: string, spec: RecipeSpec) {
+  return apiFetch<Recipe>(
+    recipePath(API_CLIENT_ROUTES.updateRecipe.path, recipeId),
+    {
+      method: API_CLIENT_ROUTES.updateRecipe.method.toUpperCase(),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(spec),
+    }
+  );
+}
+
+export async function deleteRecipe(recipeId: string) {
+  return apiFetch<{ deleted: boolean; id: string }>(
+    recipePath(API_CLIENT_ROUTES.deleteRecipe.path, recipeId),
+    { method: API_CLIENT_ROUTES.deleteRecipe.method.toUpperCase() }
+  );
+}
+
+export async function runRecipe(recipeId: string) {
+  return apiFetch<RunRecord>(
+    recipePath(API_CLIENT_ROUTES.runRecipe.path, recipeId),
+    { method: API_CLIENT_ROUTES.runRecipe.method.toUpperCase() }
+  );
+}
+
+export async function getRuns() {
+  return apiFetch<RunRecord[]>(API_CLIENT_ROUTES.runs.path);
+}
+
+export async function getRun(runId: string) {
+  return apiFetch<RunRecord>(
+    API_CLIENT_ROUTES.runById.path.replace("{run_id}", encodeURIComponent(runId))
+  );
+}
+
+export async function getCurationSummary() {
+  return apiFetch<CurationSummary>(API_CLIENT_ROUTES.curationSummary.path);
+}
+
+export async function seedDataset(modality: "text" | "image-text") {
+  return apiFetch<SeedResult>(
+    `${API_CLIENT_ROUTES.seedDataset.path}?modality=${encodeURIComponent(modality)}`,
+    { method: API_CLIENT_ROUTES.seedDataset.method.toUpperCase() }
+  );
 }

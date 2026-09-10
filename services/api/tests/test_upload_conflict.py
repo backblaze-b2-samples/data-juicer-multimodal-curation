@@ -2,7 +2,7 @@
 
 The API mints the object key from the declared filename at presign time; the
 browser never chooses where its bytes land. B2 buckets are always versioned, so
-re-uploading the same name just creates a new version — there is no duplicate
+re-uploading the same name just creates a new version - there is no duplicate
 rejection.
 """
 

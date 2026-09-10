@@ -25,7 +25,7 @@ import {
   uploadStatusLabel,
   type UploadItem,
 } from "@/lib/upload-status";
-import type { FileStatus } from "@vibe-coding-starter-kit/shared";
+import type { FileStatus } from "@data-juicer-multimodal-curation/shared";
 
 export type { UploadItem };
 

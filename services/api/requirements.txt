@@ -11,6 +11,8 @@ pydantic-settings>=2.7.0
 boto3>=1.35.0
 Pillow>=11.0.0
 PyPDF2>=3.0.0
+# Recipe + Data-Juicer config authoring (already in the locked resolution).
+PyYAML>=6.0
 
 # Dev / quality
 ruff>=0.8.0

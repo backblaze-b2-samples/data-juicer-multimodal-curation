@@ -37,7 +37,7 @@ class FileNotFoundServiceError(Exception):
     """Raised when a file is not found.
 
     Named distinctly from the built-in ``FileNotFoundError`` so it never
-    shadows it at module scope — code here (and in callers) can rely on the
+    shadows it at module scope - code here (and in callers) can rely on the
     built-in meaning what it says.
     """
 
@@ -60,7 +60,7 @@ class FileTooLargeServiceError(Exception):
 
 
 def validate_key(key: str) -> None:
-    """Reject empty keys, path-traversal patterns, and — when configured — keys
+    """Reject empty keys, path-traversal patterns, and - when configured - keys
     outside the allowed prefix.
 
     `settings.allowed_key_prefix` is empty by default, so any key shape is
@@ -91,7 +91,7 @@ def warm_listing_cache() -> None:
 
 def get_files(prefix: str = "", limit: int = 100) -> list[FileMetadata]:
     # SECURITY: this lists the whole bucket (or `prefix`) with no per-user
-    # filter — see docs/SECURITY.md. A multi-tenant clone must scope this to
+    # filter - see docs/SECURITY.md. A multi-tenant clone must scope this to
     # the caller's own prefixes, or users see each other's files.
     if limit < 1 or limit > 1000:
         raise ValueError("Limit must be between 1 and 1000")
@@ -160,7 +160,7 @@ def get_preview_url(key: str) -> str:
     """Return an *inline* presigned URL without recording a download.
 
     Used by the preview modal for rendering images / PDFs inline, so the URL
-    must ask B2 for `Content-Disposition: inline` — with `attachment` (the
+    must ask B2 for `Content-Disposition: inline` - with `attachment` (the
     download default) a browser downloads the file instead of painting it and
     the PDF preview pane stays blank. Opening a preview is also not a
     user-initiated download, so it must not inflate the download counter.

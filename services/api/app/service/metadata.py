@@ -13,16 +13,16 @@ logger = logging.getLogger(__name__)
 # a deliberate safety control, so we keep it and report the skip instead of
 # returning a detail payload that silently omits the Image section.
 _BOMB_WARNING = (
-    "Image metadata unavailable — this image is larger than the decode limit "
+    "Image metadata unavailable - this image is larger than the decode limit "
     "that guards against decompression-bomb attacks, so dimensions and EXIF "
     "were skipped. Checksums and size are still exact."
 )
 _IMAGE_WARNING = (
-    "Image metadata unavailable — the image could not be decoded. Checksums "
+    "Image metadata unavailable - the image could not be decoded. Checksums "
     "and size are still exact."
 )
 _PDF_WARNING = (
-    "PDF metadata unavailable — the document could not be parsed. Checksums "
+    "PDF metadata unavailable - the document could not be parsed. Checksums "
     "and size are still exact."
 )
 

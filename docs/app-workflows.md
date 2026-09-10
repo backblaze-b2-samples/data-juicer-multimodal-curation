@@ -3,6 +3,25 @@
 
 User journeys inside the application.
 
+## Author and Run a Curation Recipe (primary journey)
+
+- User navigates to `/recipes` and clicks **New recipe**
+- Chooses a **modality** (image-text | video | audio | text) and a **source prefix** (both selectors, never free text)
+- Selects operators from the finite Data-Juicer catalog (a checklist); defaults are lightweight CPU operators and are pre-checked, with per-operator numeric thresholds shown with placeholder hints. Model-backed operators are flagged "downloads a model / GPU-preferred" and off by default
+- Saving writes a `configs/<slug>.yaml` object to B2 and lands on the recipe detail page (rendered YAML + operator chain)
+- Clicking **Run curation** streams the source shards from `raw/`, runs Data-Juicer locally in an isolated subprocess (one run at a time), then uploads `refined/<run>/` and `stats/<run>.json`. A pending state shows while it runs; a toast reports kept vs total samples
+- If the Data-Juicer engine isn't installed, the run is recorded as `failed` with an actionable "install requirements-ml.txt" message — never a crash
+- **Edit** opens the form pre-filled from the stored YAML; **Delete** uses the confirm dialog
+- See: [Curation Recipes](features/recipes.md), [Curation Run](features/curation-run.md)
+
+## Browse Datasets
+
+- User navigates to `/datasets`
+- **Seed demo corpus** generates a tiny synthetic corpus (PIL images + text JSONL) under `raw/` — no download, no license review, no second key
+- A prefix selector scopes the view to `raw/`, `refined/`, `stats/`, or `configs/`; `raw/` rows are grouped by inferred modality
+- Each object can be downloaded via a presigned URL. The full-bucket File Explorer remains under `/files`
+- See: [Datasets Library](features/datasets-library.md)
+
 ## Upload Files
 
 - User navigates to `/upload`
@@ -34,13 +53,20 @@ User journeys inside the application.
 ## View Dashboard
 
 - User navigates to `/` (home)
-- Three parallel API calls load: stats, recent files, upload activity — all served from one shared bucket listing that the API warms at startup
-- While stats load, the page states it in words above the cards rather than showing silent skeletons
-- Stats cards show: total files, storage used, uploads today, total downloads
-- Upload chart shows last 7 days of upload activity as bar chart
-- Recent uploads table shows last 10 files with filename, size, type, date. Each filename links to that file's preview on `/files` — `/files` teaches "click a file to preview it", so the same gesture here has to answer rather than being inert text
-- Empty state: "No files uploaded yet" messages
+- Two calls load in parallel: the curation summary and the runs list
+- Stat cards show: recipes, runs, pass rate, dedup ratio
+- A storage-split card shows raw vs refined vs stats human sizes on B2
+- The recent-runs table shows recipe, modality, samples in → out, and a status badge; "View all" links to `/runs`
+- Empty state: zeros and "No runs yet"
 - See: [Dashboard](features/dashboard.md)
+
+## View Runs
+
+- User navigates to `/runs`
+- Each run is a card: status badge, recipe + modality, samples in/kept, pass rate, dedup ratio, device, duration
+- A per-operator table shows in/out/filtered/kept for each operator (parsed from the engine's own output)
+- Failed runs show their error message inline; the recipe detail page shows only that recipe's runs
+- See: [Curation Run](features/curation-run.md)
 
 ## Change Preferences
 

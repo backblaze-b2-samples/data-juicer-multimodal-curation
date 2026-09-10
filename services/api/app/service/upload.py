@@ -83,7 +83,7 @@ MIME_EXTENSION_MAP: dict[str, set[str]] = {
 # content_type is untrusted, so we sniff the leading bytes and reject obvious
 # mismatches (e.g. an HTML/script payload uploaded as image/png). Text-like
 # types (text/plain, text/csv, application/json) and the OOXML/container types
-# have no reliable leading signature and are intentionally absent — they skip
+# have no reliable leading signature and are intentionally absent - they skip
 # this check but remain constrained by the extension/type consistency check.
 # This dict is the single source of truth for BOTH the check and
 # `content_type_has_signature()`, so the verify path never fetches header bytes
@@ -132,7 +132,7 @@ def sanitize_filename(filename: str) -> str:
         # Preserve the extension only when there is one that still fits;
         # otherwise (no dot, or an absurdly long "extension") hard-truncate.
         # `rpartition` returns ("", "", name) when there is no dot, so guard on
-        # `sep`, not `ext` — else an extensionless name keeps its whole body.
+        # `sep`, not `ext` - else an extensionless name keeps its whole body.
         name = (
             base[: 200 - len(ext) - 1] + "." + ext
             if sep and len(ext) < 200
@@ -203,7 +203,7 @@ def create_presigned_upload(
     """Validate a declared upload and return a presigned PUT for direct-to-B2.
 
     `size_bytes` and `content_type` are signed into the URL, so B2 refuses any
-    body of a different size or type — the size/type guarantees survive even
+    body of a different size or type - the size/type guarantees survive even
     though the bytes never reach the API. Raises UploadError on failure.
     """
     key = _validate_declared(filename, content_type, size_bytes)
@@ -214,7 +214,7 @@ def create_presigned_upload(
         url=url,
         method="PUT",
         content_type=content_type,
-        # The browser MUST send exactly these — they are signed into the URL.
+        # The browser MUST send exactly these - they are signed into the URL.
         headers={"Content-Type": content_type},
         expires_in=expires_in,
     )
@@ -234,7 +234,7 @@ def verify_upload(key: str) -> FileUploadResponse:
     list it. The unconditional controls that do NOT depend on verify are the
     presign allow-list (no HTML/SVG), the signed content-type (the object is
     always served as an allow-listed, non-executable type) and the signed size.
-    Enabling quarantine→promote (see the design plan) closes that window.
+    Enabling quarantine->promote (see the design plan) closes that window.
     """
     if not key.startswith(UPLOAD_PREFIX):
         raise UploadError("Upload key must be under the uploads/ prefix")
@@ -264,7 +264,7 @@ def verify_upload(key: str) -> FileUploadResponse:
     if not validate_extension_matches_type(metadata.filename, metadata.content_type):
         _reject("File extension does not match declared content type", 415)
 
-    # Only fetch header bytes for types that actually have a signature — text
+    # Only fetch header bytes for types that actually have a signature - text
     # and container types would just pass unconditionally, so the Range-GET is
     # pure waste on the (common) data-file upload path.
     if content_type_has_signature(metadata.content_type):

@@ -2,7 +2,7 @@
 
 On Vercel the API is served under the ``/api`` path prefix (single-origin
 ``services`` deployment). The entrypoint is a thin ASGI wrapper that strips that
-prefix and delegates to ``main.app`` — so it is no longer identical to
+prefix and delegates to ``main.app`` - so it is no longer identical to
 ``main.app``, but it must route ``/api``-prefixed requests to the same handlers
 and leave unprefixed (local) requests untouched.
 """

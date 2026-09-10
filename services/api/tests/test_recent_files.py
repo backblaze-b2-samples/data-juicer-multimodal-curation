@@ -1,4 +1,4 @@
-"""Tests for recent files ordering — most recent first, regardless of key name."""
+"""Tests for recent files ordering - most recent first, regardless of key name."""
 
 from datetime import UTC, datetime, timedelta
 

@@ -1,7 +1,7 @@
 """Preview presigns must be `inline`; downloads must stay `attachment`.
 
 A preview URL that answers with `Content-Disposition: attachment` can never
-render in an `<iframe>` — the browser starts a download instead — so the
+render in an `<iframe>` - the browser starts a download instead - so the
 advertised inline PDF preview is impossible. `<img>` ignores the header, which
 is why images masked the bug.
 """
