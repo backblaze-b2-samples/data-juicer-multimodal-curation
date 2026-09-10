@@ -27,8 +27,9 @@ interface FilePreviewProps {
   /** Download the previewed file. The dialog is the advertised default path
    *  ("Click a file to preview it"), so it must offer every file action. */
   onDownload: (file: FileMetadata) => void;
-  /** Delete the previewed file. The owner runs the confirmation step. */
-  onDelete: (file: FileMetadata) => void;
+  /** Delete the previewed file. The owner runs the confirmation step. Optional:
+   *  omit it (e.g. the read-only Datasets browser) to hide the Delete action. */
+  onDelete?: (file: FileMetadata) => void;
   /** Key currently waiting on a presigned download URL, if any. */
   downloadingKey?: string | null;
 }
@@ -182,15 +183,17 @@ export function FilePreview({
             )}
             {isDownloading ? "Preparing…" : "Download"}
           </Button>
-          <Button
-            className="text-destructive hover:text-destructive"
-            onClick={() => onDelete(file)}
-            size="sm"
-            variant="outline"
-          >
-            <Trash2 aria-hidden="true" className="h-3.5 w-3.5" />
-            Delete
-          </Button>
+          {onDelete && (
+            <Button
+              className="text-destructive hover:text-destructive"
+              onClick={() => onDelete(file)}
+              size="sm"
+              variant="outline"
+            >
+              <Trash2 aria-hidden="true" className="h-3.5 w-3.5" />
+              Delete
+            </Button>
+          )}
         </div>
         {/* Detailed metadata spans the full dialog width rather than the
             right half-column, so long checksums / EXIF / PDF rows have room

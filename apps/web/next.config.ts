@@ -8,6 +8,11 @@ import type { NextConfig } from "next";
 // without per-deployment tweaks.
 const nextConfig: NextConfig = {
   transpilePackages: ["@data-juicer-multimodal-curation/shared"],
+  // The app's own Playwright config and many local setups open the app on the
+  // 127.0.0.1 origin. Without this, Next 16's dev cross-origin protection 403s
+  // the client bundle from that origin and every control goes dead. Allow both
+  // loopback spellings so the app works however it's opened in dev.
+  allowedDevOrigins: ["127.0.0.1", "localhost"],
   images: {
     remotePatterns: [
       {

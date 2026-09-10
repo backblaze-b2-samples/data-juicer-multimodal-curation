@@ -35,7 +35,7 @@ function deriveCopy(error: unknown): DerivedCopy {
       return {
         icon: WifiOff,
         title: "Can't reach the API",
-        description: `No response from ${API_BASE}. Make sure the API is running (\`pnpm dev:api\`) and reachable.`,
+        description: `No response from ${API_BASE}. Make sure the API is running (\`pnpm dev:api\`) and reachable, or that you're viewing the app on an allowed origin (a CORS/origin mismatch — e.g. 127.0.0.1 vs localhost — looks the same as the API being down).`,
       };
     }
     if (error.status === 401 || error.status === 403) {

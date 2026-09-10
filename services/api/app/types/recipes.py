@@ -20,12 +20,14 @@ class OperatorConfig(BaseModel):
     """One Data-Juicer operator plus its numeric thresholds.
 
     `name` must be one of the finite operator catalog (service/recipes.py);
-    `params` are per-operator numeric knobs (min/max thresholds). Kept as a
-    free-form numeric map so new catalog operators need no model change.
+    `params` are per-operator numeric knobs (min/max thresholds). Values may be
+    int or float so integer-only Data-Juicer params (e.g. `rep_len`, `min_len`)
+    survive the config->engine boundary as ints rather than being widened to
+    float, which the engine rejects.
     """
 
     name: str
-    params: dict[str, float] = Field(default_factory=dict)
+    params: dict[str, float | int] = Field(default_factory=dict)
 
 
 class RecipeSpec(BaseModel):

@@ -438,7 +438,7 @@
         "type": "object"
       },
       "OperatorConfig": {
-        "description": "One Data-Juicer operator plus its numeric thresholds.\n\n`name` must be one of the finite operator catalog (service/recipes.py);\n`params` are per-operator numeric knobs (min/max thresholds). Kept as a\nfree-form numeric map so new catalog operators need no model change.",
+        "description": "One Data-Juicer operator plus its numeric thresholds.\n\n`name` must be one of the finite operator catalog (service/recipes.py);\n`params` are per-operator numeric knobs (min/max thresholds). Values may be\nint or float so integer-only Data-Juicer params (e.g. `rep_len`, `min_len`)\nsurvive the config->engine boundary as ints rather than being widened to\nfloat, which the engine rejects.",
         "properties": {
           "name": {
             "title": "Name",
@@ -446,7 +446,14 @@
           },
           "params": {
             "additionalProperties": {
-              "type": "number"
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
             },
             "title": "Params",
             "type": "object"

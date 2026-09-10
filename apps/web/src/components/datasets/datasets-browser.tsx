@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { Database, Download, Sparkles } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
+import { Database, Download, FileText, ImageIcon, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -25,9 +26,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { FilePreview } from "@/components/files/file-preview";
 import { ApiError } from "@/lib/api-client";
 import { startBrowserDownload } from "@/lib/browser-download";
-import { useDownloadUrl, useFiles, useSeedDataset } from "@/lib/queries";
+import {
+  useDownloadUrl,
+  useFiles,
+  usePreviewUrl,
+  useSeedDataset,
+} from "@/lib/queries";
 import type { FileMetadata } from "@data-juicer-multimodal-curation/shared";
 
 const PREFIXES = [
@@ -44,12 +51,106 @@ function modalityOf(key: string): string {
   return "text";
 }
 
+function isPreviewable(file: FileMetadata): boolean {
+  return (
+    file.content_type.startsWith("image/") ||
+    file.content_type === "application/pdf"
+  );
+}
+
+/**
+ * Inline thumbnail for a dataset object. Fetches its own short-lived preview URL
+ * only for images (non-image rows make no extra request and show a type icon),
+ * and only once the row has actually scrolled into view (IntersectionObserver
+ * gated) — so a long, mostly off-screen grid doesn't fire hundreds of preview
+ * requests up front. While a visible image row's URL is resolving it shows a
+ * skeleton, so a pending row reads as "loading" rather than empty/broken.
+ * Clicking the resolved thumbnail opens the shared FilePreview dialog for the
+ * full-size media.
+ */
+function DatasetThumb({
+  file,
+  onOpen,
+}: {
+  file: FileMetadata;
+  onOpen: (file: FileMetadata) => void;
+}) {
+  const isImage = file.content_type.startsWith("image/");
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    if (!isImage || inView) return;
+    const el = containerRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setInView(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "200px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [isImage, inView]);
+
+  const { data, isLoading } = usePreviewUrl(file.key, isImage && inView);
+  const url = data?.url ?? file.url ?? null;
+
+  if (isImage && url) {
+    return (
+      <button
+        type="button"
+        onClick={() => onOpen(file)}
+        aria-label={`Preview ${file.filename}`}
+        className="relative h-11 w-11 overflow-hidden rounded border border-border bg-muted/30 transition hover:ring-2 hover:ring-primary"
+      >
+        <Image
+          src={url}
+          alt={file.filename}
+          width={44}
+          height={44}
+          className="h-11 w-11 object-cover"
+          unoptimized
+        />
+      </button>
+    );
+  }
+
+  if (isImage && inView && isLoading) {
+    return (
+      <div ref={containerRef} className="h-11 w-11 overflow-hidden rounded border border-border">
+        <Skeleton className="h-11 w-11 rounded-none" />
+      </div>
+    );
+  }
+
+  const Icon = isImage ? ImageIcon : FileText;
+  return (
+    <div
+      ref={containerRef}
+      className="flex h-11 w-11 items-center justify-center rounded border border-border bg-muted/30 text-muted-foreground"
+    >
+      <Icon className="h-4 w-4" aria-hidden="true" />
+    </div>
+  );
+}
+
 export function DatasetsBrowser() {
   const [prefix, setPrefix] = useState("raw/");
   const [seedModality, setSeedModality] = useState<"text" | "image-text">("image-text");
   const { data: files = [], isLoading, error, refetch } = useFiles(prefix, 500);
   const seedMutation = useSeedDataset();
   const downloadMutation = useDownloadUrl();
+  const [previewFile, setPreviewFile] = useState<FileMetadata | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+
+  const openPreview = (file: FileMetadata) => {
+    setPreviewFile(file);
+    setPreviewOpen(true);
+  };
 
   const seed = () => {
     const toastId = toast.loading("Seeding a tiny synthetic demo corpus...");
@@ -84,6 +185,7 @@ export function DatasetsBrowser() {
   }
 
   return (
+    <>
     <div className="space-y-6">
       <Card>
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4 space-y-0">
@@ -158,6 +260,7 @@ export function DatasetsBrowser() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-16">Preview</TableHead>
                         <TableHead>Key</TableHead>
                         <TableHead className="text-right">Size</TableHead>
                         <TableHead className="w-24 text-right">Download</TableHead>
@@ -166,8 +269,22 @@ export function DatasetsBrowser() {
                     <TableBody>
                       {groupFiles.map((f) => (
                         <TableRow key={f.key}>
+                          <TableCell>
+                            <DatasetThumb file={f} onOpen={openPreview} />
+                          </TableCell>
                           <TableCell className="max-w-0 truncate font-mono text-xs">
-                            {f.key}
+                            {isPreviewable(f) ? (
+                              <button
+                                type="button"
+                                onClick={() => openPreview(f)}
+                                title={f.key}
+                                className="max-w-full truncate text-left underline-offset-2 hover:text-foreground hover:underline"
+                              >
+                                {f.key}
+                              </button>
+                            ) : (
+                              f.key
+                            )}
                           </TableCell>
                           <TableCell className="text-right tabular-nums">
                             {f.size_human}
@@ -193,5 +310,15 @@ export function DatasetsBrowser() {
         </CardContent>
       </Card>
     </div>
+      {/* Reuse the Files page's media preview so refined/raw items render as
+          real media (image/PDF), not just filenames. No onDelete -> the
+          Datasets browser is a read-only review surface. */}
+      <FilePreview
+        file={previewFile}
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        onDownload={download}
+      />
+    </>
   );
 }

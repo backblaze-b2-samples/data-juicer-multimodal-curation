@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import io
 import json
+import random
 
 from PIL import Image
 
@@ -40,23 +41,48 @@ _TEXTS = [
     "Recipes are YAML operator chains versioned as objects in configs/.",
 ]
 
-# (size, fill) - two 64px images are too small for image_shape_filter(min 128);
-# the two identical 256px blues exercise the perceptual-hash deduplicator.
+# (size, seed) - the first two share a seed so they render byte-identical and
+# exercise the perceptual-hash image_deduplicator; the two 64px entries fall
+# below image_shape_filter's 128px floor; the rest are distinct and large enough
+# (dimensions + per-pixel grain) to clear the shape/aspect/size filters, so a
+# realistic MIX survives the default recipe instead of everything filtering.
+# Seed content is a gradient plus grain, NOT a solid fill: a solid-fill PNG
+# compresses to well under image_size_filter's 5KB floor and gets dropped, which
+# used to filter every seeded image (a self-defeating demo).
 _IMAGE_SPECS = [
-    ((256, 256), (40, 90, 180)),
-    ((256, 256), (40, 90, 180)),
-    ((256, 200), (200, 80, 60)),
-    ((320, 240), (60, 160, 90)),
-    ((64, 64), (120, 120, 120)),
-    ((64, 48), (200, 200, 40)),
-    ((300, 300), (150, 60, 170)),
-    ((224, 224), (30, 30, 30)),
+    ((256, 256), 1),
+    ((256, 256), 1),
+    ((256, 200), 2),
+    ((320, 240), 3),
+    ((64, 64), 4),
+    ((64, 48), 5),
+    ((300, 300), 6),
+    ((224, 224), 7),
 ]
 
 
-def _png_bytes(size: tuple[int, int], fill: tuple[int, int, int]) -> bytes:
+def _png_bytes(size: tuple[int, int], seed: int) -> bytes:
+    """Render a deterministic gradient-plus-grain PNG.
+
+    Grain gives the PNG real entropy so it clears ``image_size_filter``'s 5KB
+    floor (a solid fill compresses to a few hundred bytes and is dropped). The
+    same ``seed`` yields byte-identical output, which is what lets a duplicate
+    pair exercise the perceptual-hash deduplicator.
+    """
+    w, h = size
+    rnd = random.Random(seed)
+    base_r, base_g, base_b = (rnd.randrange(256) for _ in range(3))
+    pixels = []
+    for y in range(h):
+        for x in range(w):
+            r = (base_r + x * 160 // w + rnd.randrange(48)) % 256
+            g = (base_g + y * 160 // h + rnd.randrange(48)) % 256
+            b = (base_b + (x + y) * 120 // (w + h) + rnd.randrange(48)) % 256
+            pixels.append((r, g, b))
+    img = Image.new("RGB", size)
+    img.putdata(pixels)
     buf = io.BytesIO()
-    Image.new("RGB", size, fill).save(buf, format="PNG")
+    img.save(buf, format="PNG")
     return buf.getvalue()
 
 
@@ -74,9 +100,9 @@ def _seed_text() -> SeedResult:
 
 def _seed_image_text() -> SeedResult:
     records = []
-    for i, (size, fill) in enumerate(_IMAGE_SPECS):
+    for i, (size, seed) in enumerate(_IMAGE_SPECS):
         img_key = f"{IMAGE_TEXT_PREFIX}images/img_{i:02d}.png"
-        upload_file(_png_bytes(size, fill), img_key, "image/png")
+        upload_file(_png_bytes(size, seed), img_key, "image/png")
         records.append(
             {
                 "text": _TEXTS[i % len(_TEXTS)],

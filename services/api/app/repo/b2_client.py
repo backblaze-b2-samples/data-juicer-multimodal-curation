@@ -8,7 +8,7 @@ from urllib.parse import quote
 
 import boto3
 from botocore.config import Config
-from botocore.exceptions import ClientError
+from botocore.exceptions import BotoCoreError, ClientError
 
 from app.config import settings
 from app.repo.list_cache import cached_listing
@@ -83,7 +83,14 @@ def check_connectivity() -> bool:
 def upload_file(
     file_data: bytes, key: str, content_type: str
 ) -> FileMetadata:
-    """Upload file to B2. Raises RuntimeError on S3 failure."""
+    """Upload file to B2. Raises RuntimeError on S3 failure.
+
+    Catches ``BotoCoreError`` alongside ``ClientError``: a transient read/connect
+    timeout (e.g. ``ReadTimeoutError``) is raised by botocore even after the
+    client's own retries are exhausted, and is a ``BotoCoreError`` subclass, not
+    a ``ClientError`` - left uncaught here it escapes as a raw exception instead
+    of the handled ``RuntimeError`` callers (e.g. the seed endpoint) expect.
+    """
     client = get_s3_client()
     try:
         client.put_object(
@@ -92,7 +99,7 @@ def upload_file(
             Body=io.BytesIO(file_data),
             ContentType=content_type,
         )
-    except ClientError as e:
+    except (ClientError, BotoCoreError) as e:
         raise RuntimeError(f"B2 upload failed for '{key}': {e}") from e
     _invalidate_list_cache()  # new object must show up in listings/stats now
     folder, filename = _split_key(key)

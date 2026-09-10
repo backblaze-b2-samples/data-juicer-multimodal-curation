@@ -26,12 +26,15 @@ import {
 } from "@/components/ui/sidebar";
 import { APP_NAME } from "@/lib/app-config";
 
+// Ordered to match the natural first-time flow: data -> recipe -> run ->
+// review. Datasets (the seed/upload on-ramp) and Upload come before Recipes and
+// Runs; Files (review of produced objects) follows. No entry is removed.
 const navItems = [
   { title: "Dashboard", href: "/", icon: LayoutDashboard },
-  { title: "Recipes", href: "/recipes", icon: FlaskConical },
-  { title: "Runs", href: "/runs", icon: PlayCircle },
   { title: "Datasets", href: "/datasets", icon: Database },
   { title: "Upload", href: "/upload", icon: Upload },
+  { title: "Recipes", href: "/recipes", icon: FlaskConical },
+  { title: "Runs", href: "/runs", icon: PlayCircle },
   { title: "Files", href: "/files", icon: FolderOpen },
   { title: "Settings", href: "/settings", icon: Settings },
 ];

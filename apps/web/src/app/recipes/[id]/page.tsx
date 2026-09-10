@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Pencil, Play } from "lucide-react";
@@ -9,27 +10,90 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 import { ErrorState } from "@/components/ui/error-state";
 import { RunsTable } from "@/components/runs/runs-table";
 import { ApiError } from "@/lib/api-client";
 import { useRecipe, useRunRecipe } from "@/lib/queries";
+
+// A curation pass runs synchronously server-side (~90s) with no progress stream.
+// Rather than build one, show an honest client-side elapsed timer plus an
+// approximate stage label so the button isn't a frozen "Running..." for a
+// minute and a half. The stage is a time-based estimate, not a backend signal.
+function runStage(seconds: number): string {
+  if (seconds < 4) return "Preparing input";
+  if (seconds < 12) return "Localizing media";
+  if (seconds < 75) return "Running operators";
+  return "Writing refined output";
+}
+
+// The determinate progress bar is driven off the same time-based estimate as
+// `runStage`, not a backend signal (there is no progress stream). Capped
+// below 100 while the run is actually in flight so the bar never claims
+// "done" before the backend says so; `run()` snaps it to 100 only once the
+// mutation settles (success or error).
+const ESTIMATED_RUN_SECONDS = 90;
+const RUNNING_PROGRESS_CAP = 90;
+
+function progressFromElapsed(seconds: number): number {
+  return Math.min(
+    RUNNING_PROGRESS_CAP,
+    Math.round((seconds / ESTIMATED_RUN_SECONDS) * 100),
+  );
+}
 
 export default function RecipeDetailPage() {
   const params = useParams();
   const id = typeof params.id === "string" ? params.id : "";
   const { data: recipe, isLoading, error, refetch } = useRecipe(id);
   const runMutation = useRunRecipe();
+  const [elapsed, setElapsed] = useState(0);
+  const [progress, setProgress] = useState(0);
+  // Kept visible slightly past `isPending` flipping false so the 100% snap
+  // (set in the mutation callbacks below) is actually seen rather than
+  // unmounting in the same tick the run finishes.
+  const [showRunUi, setShowRunUi] = useState(false);
+  const startRef = useRef<number | null>(null);
+
+  // Tick the elapsed counter and derived progress while a run is in flight.
+  // The interval callback is the only writer, so this is not a
+  // set-state-in-effect.
+  useEffect(() => {
+    if (!runMutation.isPending) return;
+    const timer = setInterval(() => {
+      if (startRef.current !== null) {
+        const seconds = Math.floor((Date.now() - startRef.current) / 1000);
+        setElapsed(seconds);
+        setProgress(progressFromElapsed(seconds));
+      }
+    }, 250);
+    return () => clearInterval(timer);
+  }, [runMutation.isPending]);
 
   const run = () => {
     if (!recipe) return;
+    startRef.current = Date.now();
+    setElapsed(0);
+    setProgress(0);
+    setShowRunUi(true);
     const toastId = toast.loading(`Running "${recipe.name}"...`);
+    const onSettled = () => {
+      setProgress(100);
+      window.setTimeout(() => setShowRunUi(false), 600);
+    };
     runMutation.mutate(recipe.id, {
-      onSuccess: (r) =>
-        r.status === "succeeded"
-          ? toast.success(`Kept ${r.samples_out}/${r.samples_in} samples`, { id: toastId })
-          : toast.error(r.error ?? "Run failed", { id: toastId }),
-      onError: (err) =>
-        toast.error(err instanceof ApiError ? err.message : "Run failed", { id: toastId }),
+      onSuccess: (r) => {
+        onSettled();
+        if (r.status === "succeeded") {
+          toast.success(`Kept ${r.samples_out}/${r.samples_in} samples`, { id: toastId });
+        } else {
+          toast.error(r.error ?? "Run failed", { id: toastId });
+        }
+      },
+      onError: (err) => {
+        onSettled();
+        toast.error(err instanceof ApiError ? err.message : "Run failed", { id: toastId });
+      },
     });
   };
 
@@ -60,18 +124,33 @@ export default function RecipeDetailPage() {
             </>
           )}
         </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <Button onClick={run} disabled={runMutation.isPending || !recipe}>
-            <Play className="h-3.5 w-3.5" />
-            {runMutation.isPending ? "Running..." : "Run curation"}
-          </Button>
-          {recipe && (
-            <Button asChild variant="outline">
-              <Link href={`/recipes/${recipe.id}/edit`}>
-                <Pencil className="h-3.5 w-3.5" />
-                Edit
-              </Link>
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          <div className="flex items-center gap-2">
+            <Button onClick={run} disabled={runMutation.isPending || showRunUi || !recipe}>
+              <Play className="h-3.5 w-3.5" />
+              {runMutation.isPending ? `Running… ${elapsed}s` : "Run curation"}
             </Button>
+            {recipe && (
+              <Button asChild variant="outline">
+                <Link href={`/recipes/${recipe.id}/edit`}>
+                  <Pencil className="h-3.5 w-3.5" />
+                  Edit
+                </Link>
+              </Button>
+            )}
+          </div>
+          {showRunUi && (
+            <div className="flex w-48 flex-col gap-1.5">
+              <Progress value={progress} className="h-1.5" />
+              <p
+                className="text-xs text-muted-foreground tabular-nums"
+                aria-live="polite"
+              >
+                {runMutation.isPending
+                  ? `${runStage(elapsed)} · a full pass takes ~90s`
+                  : "Done"}
+              </p>
+            </div>
           )}
         </div>
       </div>

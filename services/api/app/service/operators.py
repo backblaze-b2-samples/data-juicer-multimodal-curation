@@ -183,6 +183,21 @@ def validate_operators(
     return operators
 
 
+def _int_if_whole(value: float | int) -> float | int:
+    """Narrow a whole-number float back to int for the config->engine boundary.
+
+    Several Data-Juicer params are integer-only (``rep_len`` for the repetition
+    filters, ``min_len``/``max_len``, image ``min_width``/``min_height``). A YAML
+    or JSON round-trip can widen ``10`` to ``10.0``; passed to DJ that raises
+    ``'float' object cannot be interpreted as an integer``. Real fractions
+    (ratios, scores, durations like ``0.5``) are not whole and pass through
+    untouched, and an int is always accepted where DJ declares a float.
+    """
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
+    return value
+
+
 def _dj_args(op: OperatorConfig) -> dict:
     """Map a catalog operator + its numeric params to Data-Juicer op arguments."""
     p = dict(op.params)
@@ -191,7 +206,7 @@ def _dj_args(op: OperatorConfig) -> dict:
         return {"min_size": f"{int(kb)}KB"}
     # Every other catalog operator maps its numeric params straight through
     # (Data-Juicer uses the same argument names). Dedup operators have no args.
-    return {k: v for k, v in p.items()}
+    return {k: _int_if_whole(v) for k, v in p.items()}
 
 
 def render_process(operators: list[OperatorConfig]) -> list[dict]:

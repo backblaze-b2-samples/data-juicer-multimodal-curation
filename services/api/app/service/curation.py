@@ -27,6 +27,7 @@ from app.service.dj_engine import (
     run_subprocess,
     write_config,
 )
+from app.service.refined_media import persist_refined
 from app.types import OperatorStat, Recipe, RunRecord
 
 REFINED_PREFIX = "refined/"
@@ -102,8 +103,11 @@ def _execute(recipe: Recipe) -> RunRecord:
         samples_out = _count_lines(export_path)
         op_stats = _operator_stats(recipe, output, samples_in)
         refined_prefix = f"{REFINED_PREFIX}{run_id}/"
+        # Persist media + rewrite paths to B2 keys BEFORE the workdir is cleaned,
+        # so no refined record points at a temp path that `finally` deletes.
+        upload_path = persist_refined(recipe, export_path, workdir, refined_prefix)
         upload_file_from_path(
-            export_path, f"{refined_prefix}refined.jsonl", "application/x-ndjson"
+            upload_path, f"{refined_prefix}refined.jsonl", "application/x-ndjson"
         )
         return _finish_succeeded(
             record, started, samples_in, samples_out, op_stats, refined_prefix, t0
@@ -154,13 +158,22 @@ def _count_lines(path: str) -> int:
 
 
 def _extract_error(output: str) -> str | None:
-    for ln in reversed(output.splitlines()):
-        ln = ln.strip()
+    lines = [ln.strip() for ln in output.splitlines() if ln.strip()]
+    # Preferred: the worker's own structured error line.
+    for ln in reversed(lines):
         if ln.startswith("{") and '"error"' in ln:
             try:
                 return json.loads(ln).get("error")
             except json.JSONDecodeError:
                 continue
+    # A per-operator engine crash (now unmasked by skip_op_error=False) can kill
+    # the subprocess before the worker emits its JSON line. Fall back to the last
+    # engine log line naming an error/exception so the FAILED run still carries an
+    # actionable hint instead of a bare exit code.
+    for ln in reversed(lines):
+        low = ln.lower()
+        if "error" in low or "exception" in low or "traceback" in low:
+            return ln[-300:]
     return None
 
 

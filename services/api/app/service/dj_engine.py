@@ -60,6 +60,12 @@ def build_config(recipe: Recipe, input_path: str, export_path: str) -> dict:
         "np": 1,  # single process for the demo (keeps native state contained)
         "text_keys": "text",
         "open_tracer": False,
+        # Surface a genuine per-operator engine error instead of swallowing it:
+        # DJ defaults skip_op_error=True, which drops every sample on a crashing
+        # op and reports "Left 0 samples", so a real failure reads as a
+        # "succeeded / 0 kept" run. Failing loudly lets the caller mark the run
+        # FAILED with an actionable message.
+        "skip_op_error": False,
         "process": render_process(recipe.operators),
     }
     if recipe.modality == "image-text":
@@ -90,7 +96,14 @@ def run_subprocess(config_path: str) -> tuple[int, str]:
     return proc.returncode, (proc.stdout or "") + "\n" + (proc.stderr or "")
 
 
-_OP_LOG_RE = re.compile(r"OP\s*\[?([a-z0-9_]+)\]?[^0-9]*?(\d+)\s+samples", re.IGNORECASE)
+# Data-Juicer 1.4.6 logs one line per operator when it finishes, e.g.:
+#   OP [text_length_filter] Done in 0.557s. Left 7 samples.
+# Match the operator name in brackets and the trailing "Left <n> samples" count.
+# Brackets are kept optional and the gap is `[^\n]*?` (not `[^0-9]`) so an
+# intervening duration like "0.557s" no longer aborts the match.
+_OP_LOG_RE = re.compile(
+    r"OP\s*\[?([a-z0-9_]+)\]?[^\n]*?Left\s+(\d+)\s+samples", re.IGNORECASE
+)
 
 
 def parse_operator_counts(output: str) -> list[tuple[str, int]]:
